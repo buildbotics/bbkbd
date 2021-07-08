@@ -25,7 +25,7 @@
 #endif
 
 
-bool debug = false;
+bool verbose = false;
 
 
 void die(const char *fmt, ...) {
@@ -45,8 +45,8 @@ void die(const char *fmt, ...) {
 }
 
 
-void print_dbg(const char *fmt, ...) {
-  if (!debug) return;
+void message(const char *fmt, ...) {
+  if (!verbose) return;
 
   va_list ap;
   va_start(ap, fmt);

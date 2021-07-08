@@ -15,7 +15,7 @@
 
 #include <stdbool.h>
 
-extern bool debug;
+extern bool verbose;
 
 typedef struct {
   int width;
@@ -23,6 +23,6 @@ typedef struct {
 } Dim;
 
 void die(const char *fmt, ...);
-void print_dbg(const char *fmt, ...);
+void message(const char *fmt, ...);
 void simulate_key(Display *dpy, KeySym keysym, bool press);
 Dim get_display_dims(Display *dpy, int screen);

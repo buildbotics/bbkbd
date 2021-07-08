@@ -17,6 +17,8 @@
 
 #include <signal.h>
 #include <locale.h>
+#include <errno.h>
+
 
 #define DEFAULT_FONT "DejaVu Sans:size=18"
 
@@ -27,11 +29,19 @@ static bool running = true;
 static const char *show_cmd = 0;
 static const char *hide_cmd = 0;
 static int space = 4;
+static volatile bool signal_open = false;
+static bool button_open = false;
 
 
-void signaled(int sig) {
+static void signaled(int sig) {
   running = false;
-  print_dbg("Signal %d received\n", sig);
+  message("Signal %d received\n", sig);
+}
+
+
+static void kbd_signal(int sig) {
+  signal_open = sig == SIGUSR1;
+  message("Signal %d received\n", sig);
 }
 
 
@@ -40,7 +50,7 @@ void usage(char *argv0, int ret) {
     "usage: %s [-hdb] [-f <font>] [-b <x> <y>]\n"
     "Options:\n"
     "  -h         - Print this help screen and exit\n"
-    "  -d         - Enable debug\n"
+    "  -v         - Verbose output\n"
     "  -f <font>  - Font string, default: " DEFAULT_FONT "\n"
     "  -b <x> <y> - Button screen position. Values between 0 and 1.\n"
     "  -S <cmd>   - Command to run before showing the keyboard.\n"
@@ -55,7 +65,7 @@ void usage(char *argv0, int ret) {
 void parse_args(int argc, char *argv[]) {
   for (int i = 1; argv[i]; i++) {
     if (!strcmp(argv[i], "-h")) usage(argv[0], 0);
-    else if (!strcmp(argv[i], "-d")) debug = true;
+    else if (!strcmp(argv[i], "-v")) verbose = true;
     else if (!strcmp(argv[i], "-f")) {
       if (argc - 1 <= i) usage(argv[0], 1);
       font = argv[++i];
@@ -85,16 +95,25 @@ void parse_args(int argc, char *argv[]) {
 }
 
 
-void button_callback(Keyboard *kbd) {
+static void toggle(Keyboard *kbd) {
   if (!kbd->visible && show_cmd) system(show_cmd);
   keyboard_toggle(kbd);
   if (!kbd->visible && hide_cmd) system(hide_cmd);
 }
 
 
+static void button_callback(Keyboard *kbd) {
+  button_open = !kbd->visible;
+  signal_open = false;
+  toggle(kbd);
+}
+
+
 int main(int argc, char *argv[]) {
   signal(SIGTERM, signaled);
-  signal(SIGINT, signaled);
+  signal(SIGINT,  signaled);
+  signal(SIGUSR1, kbd_signal);
+  signal(SIGUSR2, kbd_signal);
 
   parse_args(argc, argv);
 
@@ -113,6 +132,12 @@ int main(int argc, char *argv[]) {
 
   // Event loop
   while (running) {
+    // Handle signal
+    if (!button_open &&
+        ((!kbd->visible && signal_open) || (kbd->visible && !signal_open)))
+      toggle(kbd);
+
+    // Wait for input
     struct timeval tv;
     tv.tv_sec = 0;
     tv.tv_usec = 100000; // 100ms
@@ -123,9 +148,9 @@ int main(int argc, char *argv[]) {
     FD_SET(xfd, &fds);
     int r = select(xfd + 1, &fds, 0, 0, &tv);
 
-    if (r == -1) break;
+    if (r == -1 && errno != EINTR) break;
 
-    while (r && XPending(dpy)) {
+    while (XPending(dpy)) {
       XEvent ev;
       XNextEvent(dpy, &ev);
 
