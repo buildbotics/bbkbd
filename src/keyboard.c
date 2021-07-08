@@ -282,11 +282,12 @@ void keyboard_event(Keyboard *kbd, XEvent *e) {
 
 
 void keyboard_toggle(Keyboard *kbd) {
+  Display *dpy = kbd->drw->dpy;
   kbd->visible = !kbd->visible;
 
-  if (kbd->visible) XMapRaised(kbd->drw->dpy, kbd->win);
+  if (kbd->visible) XMapWindow(dpy, kbd->win);
   else {
-    XUnmapWindow(kbd->drw->dpy, kbd->win);
+    XUnmapWindow(dpy, kbd->win);
     keyboard_unpress_all(kbd);
   }
 }
