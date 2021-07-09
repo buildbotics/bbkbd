@@ -32,7 +32,7 @@ static int create_window(Display *dpy, int root, const char *name, int w, int h,
   // Enable window events
   XSelectInput(dpy, win, StructureNotifyMask | ButtonReleaseMask |
                ButtonPressMask | ExposureMask | PointerMotionMask |
-               LeaveWindowMask);
+               LeaveWindowMask | FocusChangeMask);
 
   // Set window properties
   XWMHints *wmHints = XAllocWMHints();
@@ -276,6 +276,11 @@ void keyboard_event(Keyboard *kbd, XEvent *e) {
 
   case Expose:
     if (!e->xexpose.count) keyboard_draw(kbd);
+    break;
+
+  case FocusIn:
+    XSetInputFocus(kbd->drw->dpy, PointerRoot, RevertToPointerRoot,
+                   CurrentTime);
     break;
   }
 }
