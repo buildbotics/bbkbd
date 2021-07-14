@@ -13,11 +13,14 @@
 #include "button.h"
 #include "drw.h"
 #include "util.h"
+#include "wm.h"
 #include "config.h"
 
 #include <signal.h>
 #include <locale.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 
 #define DEFAULT_FONT "DejaVu Sans:size=18"
@@ -28,6 +31,7 @@ static float button_y = 0;
 static bool running = true;
 static const char *show_cmd = 0;
 static const char *hide_cmd = 0;
+static const char *kiosk_cmd = 0;
 static int space = 4;
 static volatile bool signal_open = false;
 static bool button_open = false;
@@ -55,6 +59,7 @@ void usage(char *argv0, int ret) {
     "  -b <x> <y> - Button screen position. Values between 0 and 1.\n"
     "  -S <cmd>   - Command to run before showing the keyboard.\n"
     "  -H <cmd>   - Command to run after hiding the keyboard.\n"
+    "  -k <cmd>   - Run in kiosk mode.  Command is run as child process.\n"
     "  -s <int>   - Space between buttons.\n";
 
   fprintf(ret ? stderr : stdout, usage, argv0);
@@ -83,6 +88,10 @@ void parse_args(int argc, char *argv[]) {
       if (argc - 1 <= i) usage(argv[0], 1);
       hide_cmd = argv[++i];
 
+    } else if (!strcmp(argv[i], "-k")) {
+      if (argc - 1 <= i) usage(argv[0], 1);
+      kiosk_cmd = argv[++i];
+
     } else if (!strcmp(argv[i], "-s")) {
       if (argc - 1 <= i) usage(argv[0], 1);
       space = atoi(argv[++i]);
@@ -106,6 +115,7 @@ static void button_callback(Keyboard *kbd) {
   button_open = !kbd->visible;
   signal_open = false;
   toggle(kbd);
+  wm_keyboard(kbd);
 }
 
 
@@ -124,6 +134,15 @@ int main(int argc, char *argv[]) {
   // Init
   Display *dpy = XOpenDisplay(0);
   if (!dpy) die("cannot open display");
+
+  // Create window manager
+  if (kiosk_cmd) {
+    wm_init(dpy);
+
+    int child = fork();
+    if (child == -1) die("Failed to execute child process");
+    if (!child) execl("/bin/sh", "sh", "-c", kiosk_cmd, NULL);
+  }
 
   Button *btn = button_create(dpy, button_x, button_y, 55, 35, font);
   Keyboard *kbd = keyboard_create(dpy, keys, space, font, colors);
@@ -154,11 +173,9 @@ int main(int argc, char *argv[]) {
       XEvent ev;
       XNextEvent(dpy, &ev);
 
-      if (ev.xany.window == kbd->win)
-        keyboard_event(kbd, &ev);
-
-      if (ev.xany.window == btn->win)
-        button_event(btn, &ev);
+      wm_event(&ev);
+      if (ev.xany.window == kbd->win) keyboard_event(kbd, &ev);
+      if (ev.xany.window == btn->win) button_event(btn, &ev);
     }
   }
 

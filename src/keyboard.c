@@ -279,8 +279,8 @@ void keyboard_event(Keyboard *kbd, XEvent *e) {
     break;
 
   case FocusIn:
-    XSetInputFocus(kbd->drw->dpy, PointerRoot, RevertToPointerRoot,
-                   CurrentTime);
+    //XSetInputFocus(kbd->drw->dpy, PointerRoot, RevertToPointerRoot,
+    //               CurrentTime);
     break;
   }
 }
@@ -290,8 +290,11 @@ void keyboard_toggle(Keyboard *kbd) {
   Display *dpy = kbd->drw->dpy;
   kbd->visible = !kbd->visible;
 
-  if (kbd->visible) XMapWindow(dpy, kbd->win);
-  else {
+  if (kbd->visible) {
+    XRaiseWindow(dpy, kbd->win);
+    XMapWindow(dpy, kbd->win);
+
+  } else {
     XUnmapWindow(dpy, kbd->win);
     keyboard_unpress_all(kbd);
   }
