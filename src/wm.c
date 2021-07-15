@@ -193,11 +193,12 @@ static int on_x_error(Display *dpy, XErrorEvent *e) {
 
 static void _activate_window(Window win) {
   Dim dim = get_display_dims(wm_dpy, DefaultScreen(wm_dpy));
-  unsigned width = dim.width;
-  unsigned height = dim.height - wm_keyboard_margin;
+  int y_offset = 0;
+  int width = dim.width;
+  int height = dim.height - wm_keyboard_margin + y_offset;
 
   XRaiseWindow(wm_dpy, win);
-  XMoveResizeWindow(wm_dpy, win, 0, 0, width, height);
+  XMoveResizeWindow(wm_dpy, win, 0, -y_offset, width, height);
   XSetInputFocus(wm_dpy, win, RevertToNone, CurrentTime);
 
   wm_active = win;
@@ -292,6 +293,7 @@ void wm_event(XEvent *e) {
       if (!wm_clients[i]) {
         wm_clients[i] = ex->window;
         XMapWindow(wm_dpy, ex->window);
+        printf("Mapped " WINDOW_FMT "\n", ex->window);
         _activate_window(wm_clients[i]);
         return;
       }

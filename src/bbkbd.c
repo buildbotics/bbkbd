@@ -108,6 +108,7 @@ static void toggle(Keyboard *kbd) {
   if (!kbd->visible && show_cmd) system(show_cmd);
   keyboard_toggle(kbd);
   if (!kbd->visible && hide_cmd) system(hide_cmd);
+  wm_keyboard(kbd);
 }
 
 
@@ -115,7 +116,6 @@ static void button_callback(Keyboard *kbd) {
   button_open = !kbd->visible;
   signal_open = false;
   toggle(kbd);
-  wm_keyboard(kbd);
 }
 
 
