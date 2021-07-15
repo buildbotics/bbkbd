@@ -200,7 +200,7 @@ static void _activate_window(Window win) {
   XRaiseWindow(wm_dpy, win);
   XMoveResizeWindow(wm_dpy, win, 0, -y_offset, width, height);
   XSetInputFocus(wm_dpy, win, RevertToNone, CurrentTime);
-
+  XSync(wm_dpy, false);
   wm_active = win;
   printf("Activated " WINDOW_FMT "\n", win);
 }
@@ -292,6 +292,7 @@ void wm_event(XEvent *e) {
     for (int i = 0; i < MAX_CLIENTS; i++)
       if (!wm_clients[i]) {
         wm_clients[i] = ex->window;
+
         XMapWindow(wm_dpy, ex->window);
         printf("Mapped " WINDOW_FMT "\n", ex->window);
         _activate_window(wm_clients[i]);

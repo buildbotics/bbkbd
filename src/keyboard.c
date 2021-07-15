@@ -21,13 +21,13 @@
 static int create_window(Display *dpy, int root, const char *name, int w, int h,
                          int x, int y, unsigned long fg, unsigned long bg) {
   XSetWindowAttributes wa;
-  wa.override_redirect = false;
   wa.border_pixel = fg;
   wa.background_pixel = bg;
+  wa.backing_store = Always;
 
   int win = XCreateWindow
     (dpy, root, x, y, w, h, 0, CopyFromParent, CopyFromParent, CopyFromParent,
-     CWOverrideRedirect | CWBorderPixel | CWBackingPixel, &wa);
+     CWBorderPixel | CWBackingPixel | CWBackingStore, &wa);
 
   // Enable window events
   XSelectInput(dpy, win, StructureNotifyMask | ButtonReleaseMask |
@@ -298,6 +298,8 @@ void keyboard_toggle(Keyboard *kbd) {
     XUnmapWindow(dpy, kbd->win);
     keyboard_unpress_all(kbd);
   }
+
+  XSync(dpy, false);
 }
 
 
