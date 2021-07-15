@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 
 #define DEFAULT_FONT "DejaVu Sans:size=18"
@@ -136,10 +137,11 @@ int main(int argc, char *argv[]) {
   if (!dpy) die("cannot open display");
 
   // Create window manager
+  int child = 0;
   if (kiosk_cmd) {
     wm_init(dpy);
 
-    int child = fork();
+    child = fork();
     if (child == -1) die("Failed to execute child process");
     if (!child) execl("/bin/sh", "sh", "-c", kiosk_cmd, NULL);
   }
@@ -183,6 +185,12 @@ int main(int argc, char *argv[]) {
   button_destroy(btn);
   keyboard_destroy(kbd);
   XCloseDisplay(dpy);
+
+  // Kill your children
+  if (child) {
+    kill(child, SIGTERM);
+    waitpid(child, 0, 0);
+  }
 
   return 0;
 }
